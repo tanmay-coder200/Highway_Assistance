@@ -15,11 +15,14 @@ export interface Provider {
   id: string;
   name: string;
   services: ServiceType[];
-  distance: number;
-  eta: number;
+  latitude: number;
+  longitude: number;
   isOpen: boolean;
   verified: boolean;
   phone: string;
+  // calculated at runtime from user location
+  calculatedDistance?: number;
+  calculatedEta?: number;
 }
 
 export interface Location {

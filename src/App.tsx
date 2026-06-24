@@ -3,33 +3,53 @@ import { WifiOff } from 'lucide-react';
 import { HomeScreen } from './components/HomeScreen';
 import { ServiceSelection } from './components/ServiceSelection';
 import { ProviderList } from './components/ProviderList';
+import { ConfirmationScreen } from './components/ConfirmationScreen';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
-import { ServiceType } from './types';
+import { useGeolocation } from './hooks/useGeolocation';
+import { ServiceType, Provider } from './types';
 
-type Screen = 'home' | 'service-selection' | 'provider-list';
+type Screen = 'home' | 'service-selection' | 'provider-list' | 'confirmation';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [selectedService, setSelectedService] = useState<ServiceType | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [contactMethod, setContactMethod] = useState<'call' | 'whatsapp'>('call');
   const isOnline = useOnlineStatus();
+  const { location } = useGeolocation();
 
-  const handleNeedHelp = () => {
-    setCurrentScreen('service-selection');
-  };
+  const userLat = location?.latitude ?? null;
+  const userLon = location?.longitude ?? null;
+  const userAddress = location?.address || 'Highway location';
+
+  const handleNeedHelp = () => setCurrentScreen('service-selection');
 
   const handleSelectService = (service: ServiceType) => {
     setSelectedService(service);
     setCurrentScreen('provider-list');
   };
 
+  const handleContact = (provider: Provider, method: 'call' | 'whatsapp') => {
+    setSelectedProvider(provider);
+    setContactMethod(method);
+    setCurrentScreen('confirmation');
+  };
+
   const handleBackToHome = () => {
     setCurrentScreen('home');
     setSelectedService(null);
+    setSelectedProvider(null);
   };
 
   const handleBackToServices = () => {
     setCurrentScreen('service-selection');
     setSelectedService(null);
+    setSelectedProvider(null);
+  };
+
+  const handleBackToProviders = () => {
+    setCurrentScreen('provider-list');
+    setSelectedProvider(null);
   };
 
   return (
@@ -60,8 +80,22 @@ function App() {
         {currentScreen === 'provider-list' && selectedService && (
           <ProviderList
             serviceType={selectedService}
-            userLocation="Highway location"
+            userLocation={userAddress}
+            userLat={userLat}
+            userLon={userLon}
             onBack={handleBackToServices}
+            onContact={handleContact}
+          />
+        )}
+
+        {currentScreen === 'confirmation' && selectedProvider && selectedService && (
+          <ConfirmationScreen
+            provider={selectedProvider}
+            serviceType={selectedService}
+            userLocation={userAddress}
+            contactMethod={contactMethod}
+            onBackToProviders={handleBackToProviders}
+            onStartOver={handleBackToHome}
           />
         )}
       </div>

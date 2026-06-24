@@ -3,6 +3,23 @@ import { Location } from '../types';
 
 type GeolocationStatus = 'detecting' | 'detected' | 'error';
 
+async function reverseGeocode(lat: number, lon: number): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+      { headers: { 'Accept-Language': 'en' } }
+    );
+    if (!res.ok) throw new Error('Geocode failed');
+    const data = await res.json();
+    const { road, suburb, city, town, village, state } = data.address || {};
+    return [road, suburb || city || town || village, state]
+      .filter(Boolean)
+      .join(', ') || data.display_name || 'Location detected';
+  } catch {
+    return 'Location detected';
+  }
+}
+
 export function useGeolocation() {
   const [location, setLocation] = useState<Location | null>(null);
   const [status, setStatus] = useState<GeolocationStatus>('detecting');
@@ -18,12 +35,10 @@ export function useGeolocation() {
     setStatus('detecting');
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          address: 'Highway location detected',
-        });
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const address = await reverseGeocode(latitude, longitude);
+        setLocation({ latitude, longitude, address });
         setStatus('detected');
         setError(null);
       },
@@ -31,11 +46,7 @@ export function useGeolocation() {
         setStatus('error');
         setError(err.message);
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   }, []);
 
